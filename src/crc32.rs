@@ -12,14 +12,13 @@ impl Crc32Digest {
     pub fn update<T: io::Read>(&mut self, bytes: &mut T) {
         use crc::crc32;
 
-        let mut buf = [0u8; 1024];
+        let buf = &mut [0u8; 8192];
         loop {
-            match bytes.read(&mut buf) {
+            match bytes.read(buf) {
                 Ok(0) => break,
-                Ok(bytes_read) => {
-                    self.0 = crc32::update(self.0, &crc32::IEEE_TABLE, &buf[0..bytes_read]);
-                }
+                Ok(bytes_read) => self.0 = crc32::update(self.0, &crc32::IEEE_TABLE, &buf[0..bytes_read]),
 
+                // I'd rather not panic, but there is really no valid response to this
                 _ => break,
             }
         }
@@ -52,8 +51,8 @@ mod tests {
     fn enhanced_digest_works() {
         let content = b"123456789";
         let mut cursor = io::Cursor::new(content);
-
         let mut digest = Crc32Digest::new();
+
         digest.update(&mut cursor);
 
         assert_eq!(checksum_ieee(content), digest.value());

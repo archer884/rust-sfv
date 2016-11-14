@@ -34,7 +34,7 @@ impl SfvRecord {
         File::open(&self.path).map(|mut file| {
             let mut digest = Crc32Digest::new();
             digest.update(&mut file);
-            return self.checksum.to_lowercase() == format!("{:x}", digest.value())
+            self.checksum.to_lowercase() == format!("{:x}", digest.value())
         }).unwrap_or(false)
     }
 }

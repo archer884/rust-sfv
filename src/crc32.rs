@@ -16,8 +16,7 @@ impl Crc32Digest {
         let buf = &mut [0u8; 8192];
         loop {
             match bytes.read(buf) {
-                Ok(0) => break,
-                Ok(bytes_read) => self.0 = crc32::update(self.0, &crc32::IEEE_TABLE, &buf[0..bytes_read]),
+                Ok(bytes_read) if bytes_read > 0 => self.0 = crc32::update(self.0, &crc32::IEEE_TABLE, &buf[0..bytes_read]),
 
                 // I'd rather not panic, but there is really no valid response to this
                 _ => break,

@@ -52,16 +52,8 @@ impl str::FromStr for SfvRecord {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut s = s.split_whitespace();
-
-        let left = match s.next() {
-            None => return Err(ParseSfvRecordError::FilePath),
-            Some(path) => path.into(),
-        };
-
-        let right = match s.next() {
-            None => return Err(ParseSfvRecordError::Checksum),
-            Some(checksum) => checksum.into(),
-        };
+        let left = s.next().ok_or(ParseSfvRecordError::FilePath)?.into();
+        let right = s.next().ok_or(ParseSfvRecordError::Checksum)?.into();
 
         match s.next() {
             None => Ok(SfvRecord {

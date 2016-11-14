@@ -12,6 +12,7 @@ impl Crc32Digest {
     pub fn update<T: io::Read>(&mut self, bytes: &mut T) {
         use crc::crc32;
 
+        // TODO: Ask why this works?!
         let buf = &mut [0u8; 8192];
         loop {
             match bytes.read(buf) {

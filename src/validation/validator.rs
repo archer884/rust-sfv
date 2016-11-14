@@ -27,12 +27,6 @@ impl Validator {
     }
 
     pub fn validate(&self) -> bool {
-        // TODO: ask what impact this is going to have
-        #[inline(always)]
-        fn validate(record: &SfvRecord) -> bool {
-            record.validate()
-        }
-
-        self.records.iter().all(validate)
+        self.records.iter().all(SfvRecord::validate)
     }
 }

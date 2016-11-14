@@ -31,13 +31,11 @@ impl SfvRecord {
     pub fn validate(&self) -> bool {
         use std::fs::File;
 
-        if let Ok(mut file) = File::open(&self.path) {
+        File::open(&self.path).map(|mut file| {
             let mut digest = Crc32Digest::new();
             digest.update(&mut file);
             return self.checksum.to_lowercase() == format!("{:x}", digest.value())
-        }
-
-        false
+        }).unwrap_or(false)
     }
 }
 

@@ -3,7 +3,10 @@ use std::io;
 use std::num;
 use std::path::Path;
 use std::str;
+use std::fmt;
+use std::error;
 
+/// A path and its attendant 32-bit checksum.
 #[derive(Debug)]
 pub struct SfvRecord {
     path: String,
@@ -11,6 +14,13 @@ pub struct SfvRecord {
 }
 
 impl SfvRecord {
+    /// Creates a new `SfvRecord` based on a path.
+    ///
+    /// Bear in mind that creating an `SfvRecord` will, in fact, hash the file 
+    /// in question, which can wreck your disk io, destroy your processor, and 
+    /// (obviously) eat your laundry. However, there is no chance of nasal 
+    /// demons with this function, because in the event that anything goes wrong,
+    /// it will simply return an `io::Error`. 
     pub fn from_path<T: AsRef<Path> + Into<String>>(path: T) -> Result<SfvRecord, io::Error> {
         use std::fs::File;
 
@@ -25,10 +35,17 @@ impl SfvRecord {
         })
     }
 
+    /// Prints the `SfvRecord` to the provided writer.
+    ///
+    /// This is used by the `SfvCreator` to produce the actual sfv file.
     pub fn write<T: io::Write>(&self, writer: &mut T) -> Result<(), io::Error> {
         write!(writer, "{} {}\n", self.path, self.checksum)
     }
 
+    /// Validates an `SfvRecord` against the file referenced by its path.
+    ///
+    /// If the file is not found or cannot be read, it will not validate. This 
+    /// is used primarily by `Validator`.
     pub fn validate(&self) -> bool {
         use std::fs::File;
 
@@ -45,8 +62,10 @@ impl SfvRecord {
     }
 }
 
+/// An error in parsing an `SfvRecord`.
+#[derive(Debug)]
 pub enum ParseSfvRecordError {
-    MissingFilePath,
+    MissingFilePath, 
     MissingChecksum,
     InvalidChecksum(num::ParseIntError),
     TooLong,
@@ -55,6 +74,37 @@ pub enum ParseSfvRecordError {
 impl From<num::ParseIntError> for ParseSfvRecordError {
     fn from(error: num::ParseIntError) -> Self {
         ParseSfvRecordError::InvalidChecksum(error)
+    }
+}
+
+impl fmt::Display for ParseSfvRecordError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            ParseSfvRecordError::MissingFilePath => write!(f, "Record has no file path"),
+            ParseSfvRecordError::MissingChecksum => write!(f, "Record has no checksum"),
+            ParseSfvRecordError::InvalidChecksum(ref e) => write!(f, "Invalid checksum: {}", e),
+            ParseSfvRecordError::TooLong => write!(f, "Record has too many parts"),
+        }
+    }
+}
+
+impl error::Error for ParseSfvRecordError {
+    fn description(&self) -> &str {
+        match *self {
+            ParseSfvRecordError::MissingFilePath => "Record has no file path",
+            ParseSfvRecordError::MissingChecksum => "Record has no checksum",
+            ParseSfvRecordError::InvalidChecksum(_) => "Invalid checksum",
+            ParseSfvRecordError::TooLong => "Record has too many parts",
+        }
+    }
+
+    fn cause(&self) -> Option<&error::Error> {
+        match *self {
+            ParseSfvRecordError::MissingFilePath => None,
+            ParseSfvRecordError::MissingChecksum => None,
+            ParseSfvRecordError::InvalidChecksum(ref e) => Some(e),
+            ParseSfvRecordError::TooLong => None,
+        }
     }
 }
 

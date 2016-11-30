@@ -9,17 +9,17 @@ pub struct SfvCreator {
 }
 
 impl SfvCreator {
-    /// Create a new blank `SfvCreator`.
+    /// Creates a new blank `SfvCreator`.
     pub fn new() -> SfvCreator {
         SfvCreator::default()
     }
 
-    /// Add a path to the sfv being created.
+    /// Adds a path to the sfv being created.
     pub fn add_path<T: AsRef<Path> + Into<String>>(&mut self, path: T) -> Result<(), io::Error> {
         Ok(self.records.push(SfvRecord::from_path(path)?))
     }
 
-    /// Print the formatted sfv to the provided writer.
+    /// Prints the formatted sfv to the provided writer.
     pub fn write<T: io::Write>(&self, writer: &mut T) -> Result<(), io::Error> {
         write!(writer, ";created using rust-sfv\n")?;
 

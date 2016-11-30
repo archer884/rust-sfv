@@ -1,12 +1,13 @@
 use crc32::Crc32Digest;
 use std::io;
+use std::num;
 use std::path::Path;
 use std::str;
 
 #[derive(Debug)]
 pub struct SfvRecord {
     path: String,
-    checksum: String,
+    checksum: u32,
 }
 
 impl SfvRecord {
@@ -16,11 +17,11 @@ impl SfvRecord {
         let mut file = File::open(path.as_ref())?;
         let mut digest = Crc32Digest::new();
 
-        digest.update(&mut file);
+        io::copy(&mut file, &mut digest)?;
 
         Ok(SfvRecord {
             path: path.into(),
-            checksum: digest.to_string(),
+            checksum: digest.hash(),
         })
     }
 
@@ -31,18 +32,30 @@ impl SfvRecord {
     pub fn validate(&self) -> bool {
         use std::fs::File;
 
-        File::open(&self.path).map(|mut file| {
-            let mut digest = Crc32Digest::new();
-            digest.update(&mut file);
-            self.checksum.to_lowercase() == format!("{:x}", digest.value())
-        }).unwrap_or(false)
+        let mut file = match File::open(&self.path) {
+            Err(_) => { return false; },
+            Ok(file) => file,
+        };
+
+        let mut digest = Crc32Digest::new();
+        match io::copy(&mut file, &mut digest) {
+            Err(_) => false,
+            Ok(_) => digest == self.checksum
+        }
     }
 }
 
 pub enum ParseSfvRecordError {
-    FilePath,
-    Checksum,
+    MissingFilePath,
+    MissingChecksum,
+    InvalidChecksum(num::ParseIntError),
     TooLong,
+}
+
+impl From<num::ParseIntError> for ParseSfvRecordError {
+    fn from(error: num::ParseIntError) -> Self {
+        ParseSfvRecordError::InvalidChecksum(error)
+    }
 }
 
 impl str::FromStr for SfvRecord {
@@ -50,13 +63,13 @@ impl str::FromStr for SfvRecord {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut s = s.split_whitespace();
-        let left = s.next().ok_or(ParseSfvRecordError::FilePath)?.into();
-        let right = s.next().ok_or(ParseSfvRecordError::Checksum)?.into();
+        let left = s.next().ok_or(ParseSfvRecordError::MissingFilePath)?.into();
+        let right = s.next().ok_or(ParseSfvRecordError::MissingChecksum)?.to_lowercase();
 
         match s.next() {
             None => Ok(SfvRecord {
                 path: left,
-                checksum: right,
+                checksum: u32::from_str_radix(&right, 16)?,
             }),
 
             _ => Err(ParseSfvRecordError::TooLong)

@@ -1,14 +1,17 @@
 use std::fmt;
 use std::io;
 
+/// A 32-bit CRC digest.
 #[derive(Copy, Clone, Default)]
 pub struct Crc32Digest(u32);
 
 impl Crc32Digest {
+    /// Create a new digest.
     pub fn new() -> Crc32Digest {
         Crc32Digest::default()
     }
 
+    /// Update the digest with the output of the provided reader.
     pub fn update<T: io::Read>(&mut self, bytes: &mut T) {
         use crc::crc32;
 
@@ -25,6 +28,7 @@ impl Crc32Digest {
         }
     }
 
+    /// Get the state of the digest as a `u32` value.
     pub fn value(&self) -> u32 {
         self.0
     }

@@ -139,6 +139,6 @@ mod tests {
             "file_three.zip e99a65fb",
         ];
 
-        test_records.iter().all(|record| record.parse::<SfvRecord>().is_ok());
+        assert!(test_records.iter().all(|record| record.parse::<SfvRecord>().is_ok()));
     }
 }
